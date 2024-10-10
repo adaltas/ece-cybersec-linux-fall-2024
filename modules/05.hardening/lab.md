@@ -53,16 +53,134 @@ List all running services and disable any unnecessary ones.
   sudo systemctl list-unit-files --type=service
   sudo systemctl disable service_name
   ```
+Listing All Services
+
+```bash
+sudo systemctl list-unit-files --type=service
+```
+- **`systemctl`**: This is the primary tool used to interact with the "systemd" service manager, which manages services and units on modern Linux systems.
+- **`list-unit-files`**: This command shows you all the unit files (services) available on your system, whether they are active or not.
+- **`--type=service`**: This option filters the output to only show units of type **service**, so you will see the list of system services (e.g., `apache2.service`, `ssh.service`, etc.).
+
+The output will display a list of services with two main columns:
+- **UNIT FILE**: The name of the service (e.g., `apache2.service`).
+- **STATE**: The state of the service. This can be:
+  - `enabled`: The service is set to start automatically at boot.
+  - `disabled`: The service is disabled and will not start automatically.
+  - `static`: The service can be activated by other services but does not start on its own.
+  - `masked`: The service is disabled and blocked from being started.
+
+Disabling an Unnecessary Service
+
+```bash
+sudo systemctl disable service_name
+```
+- **`disable`**: This command disables the specified service, preventing it from starting automatically at the next system boot.
+- **`service_name`**: This is the name of the service you want to disable. For example, to disable Apache, you would use:
+
+```bash
+sudo systemctl disable apache2.service
+```
+
+#### Note:
+Disabling a service does not stop it immediately if it is already running. If you also want to stop the service, use the following command:
+
+```bash
+sudo systemctl stop service_name
+```
+
+Example to stop Apache:
+
+```bash
+sudo systemctl stop apache2.service
+```
+Identifying Unnecessary Services
+
+To determine which services you can disable, here are some tips:
+- **Check for services you are not using**: For instance, if you are not running a web server on your personal computer, you can disable `apache2`, `nginx`, or any other server-related service.
+- **Look for services specific to software you do not use**: For example, if you are not using Docker, you can disable `docker.service`.
+- **Do not disable critical services** such as `networking`, `ssh`, or those related to log management or power management (`acpid`, `systemd-logind`, etc.).
+
+### 4. Checking Running Services
+
+If you want to see only the services that are **currently running**, use this command:
+
+```bash
+sudo systemctl --type=service --state=running
+```
+
+This will give you a more precise view of the active services, and you can then decide which ones to disable if you are not using them.
+
+
 
 ## Part 4. SSH Key Authentication (easy level)
-Generate SSH keys and disable password authentication.
+Here's a detailed explanation of the commands you've provided for generating SSH keys and disabling password authentication on a server:
+
+Generate SSH Keys
+
+```bash
+ssh-keygen -t rsa -b 4096
+```
+- **`ssh-keygen`**: This command is used to generate new SSH key pairs.
+- **`-t rsa`**: This option specifies the type of key to create. In this case, you are creating an RSA key.
+- **`-b 4096`**: This option sets the number of bits in the key. A key size of 4096 bits is recommended for strong security.
+
+Steps After Running the Command:
+- **Choose a Location**: After running the command, you will be prompted to specify a location to save the key. By default, it will be saved as `~/.ssh/id_rsa` (private key) and `~/.ssh/id_rsa.pub` (public key). You can press Enter to accept the default or provide a different path.
+  
+- **Set a Passphrase (Optional)**: You will be prompted to enter a passphrase for additional security. You can choose to leave it empty, but adding a passphrase adds an extra layer of security.
+
+Copy the Public Key to the Server
+
+```bash
+ssh-copy-id user@server
+```
+- **`ssh-copy-id`**: This command installs your public key on the remote server, allowing you to authenticate using your private key instead of a password.
+- **`user@server`**: Replace `user` with your username on the remote server and `server` with the server's hostname or IP address.
+
+Steps After Running the Command:
+- You will be prompted to enter the password for the remote user. Once you enter the correct password, the public key will be copied to the `~/.ssh/authorized_keys` file on the remote server, enabling passwordless authentication.
+
+Edit the SSH Configuration
+
+```bash
+sudo nano /etc/ssh/sshd_config
+```
+- **`sudo`**: This command is used to run commands with elevated privileges.
+- **`nano`**: This is a text editor in the terminal. You can use any text editor of your choice (like `vim` or `vi`).
+- **`/etc/ssh/sshd_config`**: This is the configuration file for the SSH daemon (sshd). You will edit this file to disable password authentication.
+
+Steps to Edit the File:
+- Find the line that says `#PasswordAuthentication yes` (the `#` indicates that the line is commented out).- Change it to:
+
+   ```bash
+   PasswordAuthentication no
+   ```
+
+Restart the SSH Daemon
+
+```bash
+sudo systemctl restart sshd
+```
+- **`systemctl`**: This command is used to control the systemd system and service manager.
+- **`restart`**: This option restarts the specified service.
+- **`sshd`**: This is the name of the SSH daemon service.
+
+#### Result:
+After restarting the SSH service, the changes you made to the configuration file will take effect. Password authentication is now disabled, and only SSH key-based authentication will be allowed.
+
+### Important Considerations
+- **Backup Access**: Before disabling password authentication, ensure you have your SSH keys set up correctly and test the connection to the server. You can open a new terminal and attempt to SSH into the server using your key. 
   ```bash
-  ssh-keygen -t rsa -b 4096
-  ssh-copy-id user@server
-  sudo nano /etc/ssh/sshd_config
-  # Set PasswordAuthentication to no
-  sudo systemctl restart sshd
+  ssh user@server
   ```
+  If you cannot log in, you might lock yourself out.
+  
+- **Firewall and Other Security Measures**: Make sure you have other security measures in place, such as a firewall and potentially using `fail2ban` to protect against brute-force attacks.
+
+- **Public Key Management**: If you ever need to add another user or device that requires access to the server, you'll need to add their public key to the `authorized_keys` file on the server.
+
+By following these steps, you've successfully generated SSH keys and disabled password authentication, enhancing the security of your SSH access to the server.
 
 ## Part 5. Set Up Fail2Ban (easy level)
 Install and configure Fail2Ban to ban IPs after multiple failed login attempts.
@@ -95,7 +213,7 @@ Use `LUKS` (Linux Unified Key Setup) to encrypt a partition.
 ## VM creation 
 ```bash
 
-multipass launch  docker --name ece --cpus 2 --memory 4g  --network name=virbr0,mode=auto
+multipass launch  docker --name ece --cpus 2 --memory 4g
 ```
 
 ```bash
